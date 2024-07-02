@@ -10,44 +10,32 @@ ns_product = Namespace('Products')
 class ProductList(Resource):
     @ns_product.marshal_list_with(product_model_with_category)
     def get(self):
-        offset = request.args.get('offset')
-        limit = request.args.get('limit')
-        pricemin = request.args.get('pricemin')
-        pricemax = request.args.get('pricemax')
-        orderA = request.args.get('orderA')
-        orderD = request.args.get('orderD')
-        if offset is None and limit is None and pricemin is None and pricemax is None and orderA is None and orderD is None:
-            products = Product.query.all()
-        else:
-            orderA = True if orderA == 'true' else False
-            orderD = True if orderD == 'true' else False
-            if offset is None and limit is None and pricemin is None and pricemax is None:
-                if orderA is None:
-                    products = Product.query.order_by(Product.price.desc()).all()
-                else:
-                    products = Product.query.order_by(Product.price.asc()).all()
-            elif pricemax is None and pricemin is None:
-                offset = int(offset)
-                limit = int(limit)
-                if orderA is None:
-                    products = Product.query.order_by(Product.price.desc()).offset(offset).limit(limit).all()
-                else:
-                    products = Product.query.order_by(Product.price.asc()).offset(offset).limit(limit).all()
-            elif offset is None and limit is None:
-                pricemin = float(pricemin)
-                pricemax = float(pricemax)
-                if orderA is None:
-                    products = Product.query.filter(Product.price >= pricemin, Product.price <= pricemax).order_by(Product.price.desc()).all()
-                else:
-                    products = Product.query.filter(Product.price >= pricemin, Product.price <= pricemax).order_by(Product.price.asc()).all()
-            else:
-                pricemin = float(pricemin)
-                pricemax = float(pricemax)
-                limit = int(limit)
-                if orderA is None:
-                    products = Product.query.filter(Product.price >= pricemin, Product.price <= pricemax).order_by(Product.price.desc()).limit(limit).all()
-                else:
-                    products = Product.query.filter(Product.price >= pricemin, Product.price <= pricemax).order_by(Product.price.asc()).limit(limit).all()
+        offset = request.args.get('offset', type=int)
+        limit = request.args.get('limit', type=int)
+        pricemin = request.args.get('pricemin', type=float)
+        pricemax = request.args.get('pricemax', type=float)
+        order = request.args.get('order', type=str)
+
+        query = Product.query
+
+        # Filtrar por rango de precios si se especifica
+        if pricemin is not None and pricemax is not None:
+            query = query.filter(Product.price >= pricemin, Product.price <= pricemax)
+        
+        # Ordenar los resultados si se especifica
+        if order:
+            if order.lower() == 'desc':
+                query = query.order_by(Product.price.desc())
+            elif order.lower() == 'asc':
+                query = query.order_by(Product.price.asc())
+
+        # Aplicar paginación si se especifica
+        if offset is not None:
+            query = query.offset(offset)
+        if limit is not None:
+            query = query.limit(limit)
+
+        products = query.all()
         return products, 200
 
     
